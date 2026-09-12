@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""note記事の下書き + SNS横展開文を生成する。
+"""note記事の下書き + X横展開文を生成する。
 
 未使用トピックを content/topics.yaml から1件選び、Claude APIで
-note記事の下書きとX/Instagram用のティーザー文を生成し、
+note記事の下書きとX用のティーザー文を生成し、
 content/drafts/ 以下にMarkdownとして保存する。生成後、選んだトピックを
 used に更新する。
 
@@ -79,10 +79,6 @@ def build_prompt(topic: dict, persona: str) -> tuple[str, str]:
 # [Xスレッド]
 (4〜6投稿。各投稿は140字以内。1投稿目で結論を言い切り、
 最後の投稿でnote記事へ誘導する一文を入れる。番号付きリストで出力。)
-
-# [Instagramキャプション]
-(冒頭2行で要約、続けて本文相当の要約、最後にハッシュタグを5〜8個。
-ハッシュタグは子育て・理学療法・パパ育児関連のものにすること。)
 """
     return system, user
 

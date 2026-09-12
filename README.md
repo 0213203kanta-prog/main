@@ -10,7 +10,7 @@
 ## できること
 
 - `content/topics.yaml` のトピックバンクから、Claude APIでnote記事の
-  下書き・X(Twitter)スレッド・Instagramキャプションを自動生成
+  下書き・X(Twitter)スレッドを自動生成
 - 週2本ペースの投稿カレンダーを自動生成
 - GitHub Actionsで毎週自動的に下書きPRを起票(人間のレビュー→手動投稿を前提)
 
@@ -43,11 +43,10 @@ python scripts/generate_calendar.py --weeks 8 --days tue fri
 ```
 
 生成された下書きは `content/drafts/YYYY-MM-DD-<topic-id>.md` に保存される。
-中身は以下の3セクション:
+中身は以下の2セクション:
 
 1. note記事本文(免責文・CTA込み)
 2. Xスレッド用の投稿文
-3. Instagramキャプション
 
 ## GitHub Actionsで自動化する場合
 
