@@ -30,11 +30,15 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/generate_draft.py
 
+      - name: Get date
+        id: date
+        run: echo "today=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
       - name: Open review PR
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "新しい下書きを生成"
-          title: "週次note下書き ($(date +'%Y-%m-%d'))"
+          title: "週次note下書き (${{ steps.date.outputs.today }})"
           body: |
             自動生成された下書きです。公開前に必ず内容を確認してください:
 
@@ -42,7 +46,7 @@ jobs:
             - [ ] 断定的な診断表現がないこと(docs/compliance.md 参照)
             - [ ] 免責文・CTAが含まれていること
 
-            確認後、note.comへ手動で転記・公開し、SNS文面も投稿してください。
+            確認後、note.comへ手動で転記・公開し、X文面も投稿してください。
           branch: auto-draft/${{ github.run_number }}
           add-paths: |
             content/drafts/**
