@@ -46,7 +46,16 @@ python scripts/generate_draft.py --dry-run
 
 # 今後8週間・週2本(火・金)の投稿カレンダーを生成
 python scripts/generate_calendar.py --weeks 8 --days tue fri
+
+# 公開済み記事(status=used)のまとめ記事を柱ごとに自動生成
+# (記事が10本前後溜まったら実行するのがおすすめ。docs/strategy.md「9.」参照)
+python scripts/generate_index.py
 ```
+
+`generate_draft.py` は既定でClaude APIのWeb検索を使い、生成のたびに
+「今の時期に関連する話題」を調べてから執筆する(トレンドは味付け程度で、
+医学的なコア情報は普遍的な内容を維持)。無効化したい場合は
+`--no-web-search` を付ける。詳しくは `docs/strategy.md` の「8.」を参照。
 
 `generate_draft.py` は生成のたびに実際のトークン使用量と概算コスト(USD)を
 標準出力に表示する。GitHub Actions実行時はジョブのログで確認できる。
@@ -82,9 +91,11 @@ content/
   calendar.csv       # generate_calendar.py の出力
   drafts/            # generate_draft.py の出力(無料記事)
   drafts/paid/       # generate_draft.py --tier paid の出力
+  index.md           # generate_index.py の出力(まとめ記事の下書き)
 scripts/
   generate_draft.py
   generate_calendar.py
+  generate_index.py
 docs/
   strategy.md     # 自動化・収益化・周知の全体戦略
   compliance.md   # 法規制・免責に関する注意点
