@@ -7,7 +7,8 @@ content/drafts/ 以下にMarkdownとして保存する。生成後、選んだ�
 used に更新する。
 
 使い方:
-    python scripts/generate_draft.py                # 次の未使用トピックを自動選択
+    python scripts/generate_draft.py                # 次の未使用トピックを自動選択(無料記事)
+    python scripts/generate_draft.py --tier paid     # 有料記事(topics_paid.yaml)から生成
     python scripts/generate_draft.py --topic-id rollover-milestone
     python scripts/generate_draft.py --dry-run       # API呼び出しをせず選択結果だけ確認
 """
@@ -23,6 +24,7 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TOPICS_PATH = ROOT / "content" / "topics.yaml"
+TOPICS_PAID_PATH = ROOT / "content" / "topics_paid.yaml"
 PERSONA_PATH = ROOT / "content" / "persona.md"
 DRAFTS_DIR = ROOT / "content" / "drafts"
 
@@ -31,13 +33,13 @@ PRICE_PER_MTOK_INPUT_USD = 5.00
 PRICE_PER_MTOK_OUTPUT_USD = 25.00
 
 
-def load_topics() -> list[dict]:
-    with open(TOPICS_PATH, encoding="utf-8") as f:
+def load_topics(path: pathlib.Path) -> list[dict]:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def save_topics(topics: list[dict]) -> None:
-    with open(TOPICS_PATH, "w", encoding="utf-8") as f:
+def save_topics(path: pathlib.Path, topics: list[dict]) -> None:
+    with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(topics, f, allow_unicode=True, sort_keys=False)
 
 
@@ -59,11 +61,38 @@ def slugify(topic_id: str) -> str:
     return re.sub(r"[^a-z0-9\-]", "", topic_id.lower())
 
 
-def build_prompt(topic: dict, persona: str) -> tuple[str, str]:
+def build_prompt(topic: dict, persona: str, tier: str) -> tuple[str, str]:
     system = (
         "あなたは日本語で子育て支援コンテンツを書くライターです。以下のペルソナ・"
         "トーン&マナーに厳密に従って執筆してください。\n\n" + persona
     )
+
+    if tier == "paid":
+        user = f"""次のトピックで、note有料記事(ディープダイブ)の下書きを作成してください。
+
+タイトル: {topic['title']}
+コンテンツの柱: {topic['pillar']}
+関連する無料記事のid: {topic['related_free_id']}
+価格: {topic['price']}円
+有料エリアの形式: {topic['format']}
+
+出力は以下のMarkdown形式で、これ以外の前置き・後書きは一切書かないでください。
+persona.md の「有料記事(ディープダイブ)のテンプレート」の構成に厳密に従うこと。
+
+# [note記事本文]
+(タイトル案を1つ、続けて無料エリア(フック→重要性→関連無料記事への
+一言リンク)。次に `▼ここから有料エリア` という行を単独で入れ、
+続けて有料エリア({topic['format']}の形式で、読むだけでなく
+「使える」内容にする)。最後に免責文とCTA。
+全体で2000〜3000文字程度。見出しには「## 」を使うこと。)
+
+# [Xスレッド]
+(4〜6投稿。各投稿は140字以内。1投稿目で結論(無料で分かること)を
+言い切り、最後の投稿で有料記事へ誘導する一文を入れる。
+番号付きリストで出力。)
+"""
+        return system, user
+
     user = f"""次のトピックでnote記事の下書きを作成してください。
 
 トピック: {topic['title']}
@@ -113,19 +142,24 @@ def print_cost(usage) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--tier", choices=["free", "paid"], default="free",
+        help="free: topics.yamlから無料記事(既定) / paid: topics_paid.yamlから有料記事",
+    )
     parser.add_argument("--topic-id", help="使用するトピックIDを指定(省略時は次の未使用トピック)")
     parser.add_argument("--dry-run", action="store_true", help="APIを呼ばずに選択結果のみ表示")
     args = parser.parse_args()
 
-    topics = load_topics()
+    topics_path = TOPICS_PAID_PATH if args.tier == "paid" else TOPICS_PATH
+    topics = load_topics(topics_path)
     topic = pick_topic(topics, args.topic_id)
-    print(f"選択したトピック: {topic['id']} - {topic['title']}")
+    print(f"[{args.tier}] 選択したトピック: {topic['id']} - {topic['title']}")
 
     if args.dry_run:
         return
 
     persona = PERSONA_PATH.read_text(encoding="utf-8")
-    system, user = build_prompt(topic, persona)
+    system, user = build_prompt(topic, persona, args.tier)
 
     try:
         output, usage = call_claude(system, user)
@@ -138,9 +172,10 @@ def main() -> None:
     except anthropic.APIStatusError as e:
         sys.exit(f"Claude APIエラー ({e.status_code}): {e.message}")
 
-    DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = DRAFTS_DIR / "paid" if args.tier == "paid" else DRAFTS_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.date.today().isoformat()
-    out_path = DRAFTS_DIR / f"{date_str}-{slugify(topic['id'])}.md"
+    out_path = out_dir / f"{date_str}-{slugify(topic['id'])}.md"
     out_path.write_text(output, encoding="utf-8")
     print(f"下書きを保存しました: {out_path}")
     print_cost(usage)
@@ -148,7 +183,7 @@ def main() -> None:
     for t in topics:
         if t["id"] == topic["id"]:
             t["status"] = "used"
-    save_topics(topics)
+    save_topics(topics_path, topics)
 
 
 if __name__ == "__main__":

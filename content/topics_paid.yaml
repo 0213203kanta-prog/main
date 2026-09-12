@@ -1,0 +1,73 @@
+# 有料記事(ディープダイブ)のネタバンク。
+# 無料記事(topics.yaml)で価値提供したうえで、
+# 「保存して使えるチェックリスト・フローチャート・プログラム」を
+# 有料エリアにする設計。note公式の分析で「実用ノウハウ系」が
+# 最も転換されやすいというデータに基づき選定。
+#
+# related_free_id: 元になる無料記事のtopics.yaml上のid(先にそちらを公開すること)
+# price: 初期の価格目安(円)。フォロワー・信頼が育つにつれて値上げを検討して良い。
+# format: 有料エリアの中身の形式
+
+- id: walking-milestone-chart
+  pillar: 発達・運動の目安
+  related_free_id: walking-start
+  title: 歩行発達 月齢別チェックシート+気になる時の受診目安フローチャート
+  price: 500
+  format: チェックシート+フローチャート
+  status: pending
+
+- id: carrier-checklist
+  pillar: 育児グッズのPT目線レビュー
+  related_free_id: carrier-review-pt
+  title: 抱っこ紐 購入前チェックリスト+月齢・体格別 選び方診断
+  price: 500
+  format: チェックリスト+診断表
+  status: pending
+
+- id: fall-prevention-checklist
+  pillar: 家庭でできる予防
+  related_free_id: fall-prevention-home
+  title: 部屋別・年齢別 転倒予防完全チェックリスト(印刷用)
+  price: 500
+  format: 印刷用チェックリスト
+  status: pending
+
+- id: shoe-fitting-guide
+  pillar: 家庭でできる予防
+  related_free_id: shoe-selection
+  title: 失敗しないファーストシューズ選び方完全ガイド+サイズ測定シート
+  price: 500
+  format: ガイド+測定シート
+  status: pending
+
+- id: leg-shape-flowchart
+  pillar: 家庭でできる予防
+  related_free_id: leg-shape-check
+  title: O脚・X脚、経過観察か受診か?判定フローチャート
+  price: 500
+  format: フローチャート
+  status: pending
+
+- id: sitting-posture-checklist
+  pillar: 発達・運動の目安
+  related_free_id: sitting-posture
+  title: お座り発達チェックリスト+家庭でできる補助エクササイズ
+  price: 500
+  format: チェックリスト+エクササイズ手順
+  status: pending
+
+- id: papa-backpain-program
+  pillar: パパ自身のケア
+  related_free_id: papa-lowback-care
+  title: パパの腰痛改善 7日間ストレッチプログラム
+  price: 680
+  format: 日毎プログラム表
+  status: pending
+
+- id: stroller-buying-guide
+  pillar: 育児グッズのPT目線レビュー
+  related_free_id: stroller-review-pt
+  title: ベビーカー選び、体格・ライフスタイル別診断ガイド
+  price: 680
+  format: 診断ガイド
+  status: pending

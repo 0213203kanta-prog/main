@@ -9,10 +9,11 @@
 
 ## できること
 
-- `content/topics.yaml` のトピックバンクから、Claude APIでnote記事の
-  下書き・X(Twitter)スレッドを自動生成
+- `content/topics.yaml`(無料記事)/ `content/topics_paid.yaml`(有料記事)の
+  トピックバンクから、Claude APIでnote記事の下書き・X(Twitter)スレッドを自動生成
 - 週2本ペースの投稿カレンダーを自動生成
-- GitHub Actionsで毎週自動的に下書きPRを起票(人間のレビュー→手動投稿を前提)
+- GitHub Actionsで週2回(火・金)自動的に下書きPRを起票(人間のレビュー→手動投稿を前提)
+- 有料記事は手動実行(`workflow_dispatch`でtier=paidを指定)で任意のタイミングに生成
 
 note.comには投稿を行う公式APIが存在しないため、実際の公開は
 レビュー後に手動で行う(数分の作業)。詳しくは
@@ -29,8 +30,11 @@ export $(cat .env | xargs)
 ## 使い方
 
 ```bash
-# 次の未使用トピックで下書きを1本生成
+# 次の未使用トピックで無料記事の下書きを1本生成
 python scripts/generate_draft.py
+
+# 有料記事(ディープダイブ)を生成
+python scripts/generate_draft.py --tier paid
 
 # トピックを指定して生成
 python scripts/generate_draft.py --topic-id rollover-milestone
@@ -46,27 +50,32 @@ python scripts/generate_calendar.py --weeks 8 --days tue fri
 標準出力に表示する。GitHub Actions実行時はジョブのログで確認できる。
 概算の考え方は `docs/strategy.md` の「7. 想定コスト」を参照。
 
-生成された下書きは `content/drafts/YYYY-MM-DD-<topic-id>.md` に保存される。
-中身は以下の2セクション:
+生成された下書きは `content/drafts/YYYY-MM-DD-<topic-id>.md`
+(有料記事は `content/drafts/paid/` 以下)に保存される。中身は以下の2セクション:
 
-1. note記事本文(免責文・CTA込み)
+1. note記事本文(免責文・CTA込み。有料記事は `▼ここから有料エリア` で
+   区切られているので、note公開時にその位置で有料設定をすること)
 2. Xスレッド用の投稿文
 
 ## GitHub Actionsで自動化する場合
 
 1. リポジトリの Settings → Secrets に `ANTHROPIC_API_KEY` を登録
-2. `.github/workflows/weekly-draft.yml` が毎週月曜にレビュー用PRを自動作成
-3. PRの内容(医学的正確性・免責文の有無)を確認してマージ
-4. note.comとSNSへ手動で転記・公開
+2. `.github/workflows/weekly-draft.yml` が毎週火・金にレビュー用PRを自動作成(無料記事)
+3. 有料記事を作りたいときは Actions タブから `Weekly note draft` を選び、
+   「Run workflow」→ tierに`paid`を指定して手動実行
+4. PRの内容(医学的正確性・免責文の有無、有料記事なら区切り位置)を確認してマージ
+5. note.comとXへ手動で転記・公開
 
 ## ディレクトリ構成
 
 ```
 content/
-  persona.md      # ペルソナ・トーン&マナー・免責/CTA定型文
-  topics.yaml     # コンテンツのトピックバンク(使用状況を自動更新)
-  calendar.csv    # generate_calendar.py の出力
-  drafts/         # generate_draft.py の出力
+  persona.md         # ペルソナ・トーン&マナー・免責/CTA定型文・有料記事テンプレート
+  topics.yaml        # 無料記事のトピックバンク(使用状況を自動更新)
+  topics_paid.yaml   # 有料記事(ディープダイブ)のトピックバンク
+  calendar.csv       # generate_calendar.py の出力
+  drafts/            # generate_draft.py の出力(無料記事)
+  drafts/paid/       # generate_draft.py --tier paid の出力
 scripts/
   generate_draft.py
   generate_calendar.py
