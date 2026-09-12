@@ -13,7 +13,8 @@
   トピックバンクから、Claude APIでnote記事の下書き・X(Twitter)スレッドを自動生成
 - 週2本ペースの投稿カレンダーを自動生成
 - GitHub Actionsで週2回(火・金)自動的に下書きPRを起票(人間のレビュー→手動投稿を前提)
-- 有料記事は手動実行(`workflow_dispatch`でtier=paidを指定)で任意のタイミングに生成
+- 無料記事を一定本数使うたびに、**有料記事(ディープダイブ)を自動判定して
+  自動的に混ぜる**(`--tier auto`が既定。ルールは`docs/strategy.md`参照)
 
 note.comには投稿を行う公式APIが存在しないため、実際の公開は
 レビュー後に手動で行う(数分の作業)。詳しくは
@@ -30,10 +31,11 @@ export $(cat .env | xargs)
 ## 使い方
 
 ```bash
-# 次の未使用トピックで無料記事の下書きを1本生成
+# tierを自動判定して下書きを1本生成(既定。通常はこれだけでよい)
 python scripts/generate_draft.py
 
-# 有料記事(ディープダイブ)を生成
+# free/paidを強制指定したいとき
+python scripts/generate_draft.py --tier free
 python scripts/generate_draft.py --tier paid
 
 # トピックを指定して生成
@@ -60,11 +62,15 @@ python scripts/generate_calendar.py --weeks 8 --days tue fri
 ## GitHub Actionsで自動化する場合
 
 1. リポジトリの Settings → Secrets に `ANTHROPIC_API_KEY` を登録
-2. `.github/workflows/weekly-draft.yml` が毎週火・金にレビュー用PRを自動作成(無料記事)
-3. 有料記事を作りたいときは Actions タブから `Weekly note draft` を選び、
-   「Run workflow」→ tierに`paid`を指定して手動実行
+2. `.github/workflows/weekly-draft.yml` が毎週火・金にレビュー用PRを自動作成
+   (tierは自動判定。無料記事が続き、条件を満たすと自動で有料記事が混ざる)
+3. PRタイトルの `[free]` / `[paid]` でどちらが生成されたか分かる
 4. PRの内容(医学的正確性・免責文の有無、有料記事なら区切り位置)を確認してマージ
-5. note.comとXへ手動で転記・公開
+5. note.comとXへ手動で転記・公開(有料記事は`▼ここから有料エリア`の
+   位置でnoteの有料設定をすること)
+
+強制的にfree/paidを指定したい場合のみ、Actionsタブの「Run workflow」から
+tierを選んで手動実行できる。
 
 ## ディレクトリ構成
 

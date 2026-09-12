@@ -7,10 +7,16 @@ content/drafts/ 以下にMarkdownとして保存する。生成後、選んだ�
 used に更新する。
 
 使い方:
-    python scripts/generate_draft.py                # 次の未使用トピックを自動選択(無料記事)
-    python scripts/generate_draft.py --tier paid     # 有料記事(topics_paid.yaml)から生成
+    python scripts/generate_draft.py                # tierを自動判定して生成(既定)
+    python scripts/generate_draft.py --tier free     # 無料記事を強制指定
+    python scripts/generate_draft.py --tier paid     # 有料記事を強制指定
     python scripts/generate_draft.py --topic-id rollover-milestone
     python scripts/generate_draft.py --dry-run       # API呼び出しをせず選択結果だけ確認
+
+tierの自動判定ルール(--tier auto、既定):
+    無料記事をFIRST_PAID_AFTER本使い終わるまでは常にfree。以降は、
+    直近の有料記事から無料記事をPAID_INTERVAL本使うたびに1本paidを
+    はさむ。有料記事のネタが尽きたら自動的にfreeに戻る。
 """
 
 import argparse
@@ -31,6 +37,10 @@ DRAFTS_DIR = ROOT / "content" / "drafts"
 MODEL = "claude-opus-5"
 PRICE_PER_MTOK_INPUT_USD = 5.00
 PRICE_PER_MTOK_OUTPUT_USD = 25.00
+
+# tier自動判定のパラメータ(docs/strategy.md フェーズ1の投入方針に対応)
+FIRST_PAID_AFTER = 6   # 最初の有料記事を出すまでに必要な無料記事の使用数
+PAID_INTERVAL = 6      # 以降、有料記事1本あたりに挟む無料記事の本数
 
 
 def load_topics(path: pathlib.Path) -> list[dict]:
@@ -59,6 +69,18 @@ def pick_topic(topics: list[dict], topic_id: str | None) -> dict:
 
 def slugify(topic_id: str) -> str:
     return re.sub(r"[^a-z0-9\-]", "", topic_id.lower())
+
+
+def decide_tier(free_topics: list[dict], paid_topics: list[dict]) -> str:
+    paid_pending = any(t.get("status", "pending") == "pending" for t in paid_topics)
+    if not paid_pending:
+        return "free"
+
+    free_used = sum(1 for t in free_topics if t.get("status") == "used")
+    paid_used = sum(1 for t in paid_topics if t.get("status") == "used")
+    threshold = FIRST_PAID_AFTER + paid_used * PAID_INTERVAL
+
+    return "paid" if free_used >= threshold else "free"
 
 
 def build_prompt(topic: dict, persona: str, tier: str) -> tuple[str, str]:
@@ -143,23 +165,32 @@ def print_cost(usage) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--tier", choices=["free", "paid"], default="free",
-        help="free: topics.yamlから無料記事(既定) / paid: topics_paid.yamlから有料記事",
+        "--tier", choices=["auto", "free", "paid"], default="auto",
+        help="auto: 使用実績から自動判定(既定) / free・paidで強制指定も可能",
     )
     parser.add_argument("--topic-id", help="使用するトピックIDを指定(省略時は次の未使用トピック)")
     parser.add_argument("--dry-run", action="store_true", help="APIを呼ばずに選択結果のみ表示")
     args = parser.parse_args()
 
-    topics_path = TOPICS_PAID_PATH if args.tier == "paid" else TOPICS_PATH
-    topics = load_topics(topics_path)
+    free_topics = load_topics(TOPICS_PATH)
+    paid_topics = load_topics(TOPICS_PAID_PATH)
+
+    if args.tier == "auto":
+        tier = decide_tier(free_topics, paid_topics)
+        print(f"tierを自動判定: {tier}")
+    else:
+        tier = args.tier
+
+    topics_path = TOPICS_PAID_PATH if tier == "paid" else TOPICS_PATH
+    topics = paid_topics if tier == "paid" else free_topics
     topic = pick_topic(topics, args.topic_id)
-    print(f"[{args.tier}] 選択したトピック: {topic['id']} - {topic['title']}")
+    print(f"[{tier}] 選択したトピック: {topic['id']} - {topic['title']}")
 
     if args.dry_run:
         return
 
     persona = PERSONA_PATH.read_text(encoding="utf-8")
-    system, user = build_prompt(topic, persona, args.tier)
+    system, user = build_prompt(topic, persona, tier)
 
     try:
         output, usage = call_claude(system, user)
@@ -172,7 +203,7 @@ def main() -> None:
     except anthropic.APIStatusError as e:
         sys.exit(f"Claude APIエラー ({e.status_code}): {e.message}")
 
-    out_dir = DRAFTS_DIR / "paid" if args.tier == "paid" else DRAFTS_DIR
+    out_dir = DRAFTS_DIR / "paid" if tier == "paid" else DRAFTS_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.date.today().isoformat()
     out_path = out_dir / f"{date_str}-{slugify(topic['id'])}.md"

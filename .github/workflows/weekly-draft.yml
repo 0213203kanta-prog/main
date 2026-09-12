@@ -5,15 +5,17 @@ on:
     # 毎週火・金 21:00 JST (12:00 UTC) - 無料記事を週2本自動生成
     - cron: "0 12 * * 2"
     - cron: "0 12 * * 5"
-  # 手動実行用。tierを指定すれば有料記事(topics_paid.yaml)も生成できる。
-  # 定期実行(schedule)は常にfree(無料記事)で動く。
+  # 手動実行用。auto(既定)なら自動判定ロジック(scripts/generate_draft.py)
+  # に任せる。free/paidを指定すれば強制もできる。
+  # 定期実行(schedule)も常にautoで動き、いいタイミングで有料記事が
+  # 自動的に混ざる(判定ルールはdocs/strategy.md参照)。
   workflow_dispatch:
     inputs:
       tier:
-        description: "free(無料記事) または paid(有料記事)"
+        description: "auto(自動判定・既定) / free(強制) / paid(強制)"
         type: choice
-        options: [free, paid]
-        default: free
+        options: [auto, free, paid]
+        default: auto
 
 permissions:
   contents: write
@@ -33,10 +35,15 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate draft
+        id: draft
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TIER: ${{ github.event.inputs.tier || 'free' }}
-        run: python scripts/generate_draft.py --tier "$TIER"
+          TIER: ${{ github.event.inputs.tier || 'auto' }}
+        run: |
+          set -o pipefail
+          python scripts/generate_draft.py --tier "$TIER" | tee /tmp/draft.log
+          RESOLVED_TIER=$(grep -m1 -oE '^\[[a-z]+\]' /tmp/draft.log | tr -d '[]')
+          echo "tier=$RESOLVED_TIER" >> "$GITHUB_OUTPUT"
 
       - name: Get date
         id: date
@@ -45,8 +52,8 @@ jobs:
       - name: Open review PR
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: "新しい下書きを生成 (${{ github.event.inputs.tier || 'free' }})"
-          title: "週次note下書き [${{ github.event.inputs.tier || 'free' }}] (${{ steps.date.outputs.today }})"
+          commit-message: "新しい下書きを生成 (${{ steps.draft.outputs.tier }})"
+          title: "週次note下書き [${{ steps.draft.outputs.tier }}] (${{ steps.date.outputs.today }})"
           body: |
             自動生成された下書きです。公開前に必ず内容を確認してください:
 
