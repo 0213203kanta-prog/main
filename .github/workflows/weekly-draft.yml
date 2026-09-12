@@ -4,6 +4,8 @@ on:
   schedule:
     # 毎週月曜 21:00 JST (12:00 UTC)
     - cron: "0 12 * * 1"
+  # 手動実行用。Settings > Actions で有効化した後、このワークフローが
+  # 一覧に反映されるまで新しいpushが必要な場合がある。
   workflow_dispatch:
 
 permissions:
