@@ -42,6 +42,10 @@ python scripts/generate_draft.py --dry-run
 python scripts/generate_calendar.py --weeks 8 --days tue fri
 ```
 
+`generate_draft.py` は生成のたびに実際のトークン使用量と概算コスト(USD)を
+標準出力に表示する。GitHub Actions実行時はジョブのログで確認できる。
+概算の考え方は `docs/strategy.md` の「7. 想定コスト」を参照。
+
 生成された下書きは `content/drafts/YYYY-MM-DD-<topic-id>.md` に保存される。
 中身は以下の2セクション:
 

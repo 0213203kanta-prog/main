@@ -27,6 +27,8 @@ PERSONA_PATH = ROOT / "content" / "persona.md"
 DRAFTS_DIR = ROOT / "content" / "drafts"
 
 MODEL = "claude-opus-5"
+PRICE_PER_MTOK_INPUT_USD = 5.00
+PRICE_PER_MTOK_OUTPUT_USD = 25.00
 
 
 def load_topics() -> list[dict]:
@@ -96,7 +98,17 @@ def call_claude(system: str, user: str) -> str:
         response = stream.get_final_message()
 
     text_parts = [block.text for block in response.content if block.type == "text"]
-    return "\n".join(text_parts)
+    return "\n".join(text_parts), response.usage
+
+
+def print_cost(usage) -> None:
+    input_cost = usage.input_tokens * PRICE_PER_MTOK_INPUT_USD / 1_000_000
+    output_cost = usage.output_tokens * PRICE_PER_MTOK_OUTPUT_USD / 1_000_000
+    total_cost = input_cost + output_cost
+    print(
+        f"トークン使用量: input={usage.input_tokens}, output={usage.output_tokens} "
+        f"(うちthinkingを含む) / 概算コスト: ${total_cost:.4f}"
+    )
 
 
 def main() -> None:
@@ -116,7 +128,7 @@ def main() -> None:
     system, user = build_prompt(topic, persona)
 
     try:
-        output = call_claude(system, user)
+        output, usage = call_claude(system, user)
     except anthropic.AuthenticationError:
         sys.exit("ANTHROPIC_API_KEY が未設定、または無効です。")
     except anthropic.RateLimitError as e:
@@ -131,6 +143,7 @@ def main() -> None:
     out_path = DRAFTS_DIR / f"{date_str}-{slugify(topic['id'])}.md"
     out_path.write_text(output, encoding="utf-8")
     print(f"下書きを保存しました: {out_path}")
+    print_cost(usage)
 
     for t in topics:
         if t["id"] == topic["id"]:
