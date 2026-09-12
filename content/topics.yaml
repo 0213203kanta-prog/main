@@ -1,0 +1,79 @@
+# コンテンツトピックバンク
+# scripts/generate_calendar.py と generate_draft.py がここから未使用のトピックを選ぶ。
+# pillar: コンテンツの柱(docs/strategy.md 2.1参照)
+# status: pending(未使用) / used(使用済み。生成後に自動更新される)
+
+- id: rollover-milestone
+  pillar: 発達・運動の目安
+  title: 寝返りが遅い気がする…理学療法士パパが教える発達の目安と見守り方
+  status: pending
+
+- id: walking-start
+  pillar: 発達・運動の目安
+  title: 歩き始めが遅い?PT目線で解説する歩行発達のタイムラインと家庭でできること
+  status: pending
+
+- id: sitting-posture
+  pillar: 発達・運動の目安
+  title: お座りが安定しないときにチェックしたい3つのポイント
+  status: pending
+
+- id: carrying-back-pain
+  pillar: 抱っこ・おんぶ・姿勢
+  title: 抱っこで腰が痛い…PTパパが実践する疲れない抱っこ姿勢
+  status: pending
+
+- id: baby-carrier-posture
+  pillar: 抱っこ・おんぶ・姿勢
+  title: 抱っこ紐の装着位置、実は腰痛の原因かもしれません
+  status: pending
+
+- id: nursing-posture
+  pillar: 抱っこ・おんぶ・姿勢
+  title: 授乳中の肩こり・猫背を防ぐ姿勢のコツ
+  status: pending
+
+- id: fall-prevention-home
+  pillar: 家庭でできる予防
+  title: つかまり立ち期の転倒予防、家庭でできる環境づくり
+  status: pending
+
+- id: leg-shape-check
+  pillar: 家庭でできる予防
+  title: O脚・X脚が気になるパパママへ。何歳まで様子見でいい?
+  status: pending
+
+- id: shoe-selection
+  pillar: 家庭でできる予防
+  title: ファーストシューズの選び方、PT目線のチェックリスト
+  status: pending
+
+- id: carrier-review-pt
+  pillar: 育児グッズのPT目線レビュー
+  title: 抱っこ紐、PTが選ぶならこの3つの基準
+  status: pending
+
+- id: bouncer-review-pt
+  pillar: 育児グッズのPT目線レビュー
+  title: バウンサー・ハイローチェアは股関節に負担?使用時間の目安
+  status: pending
+
+- id: stroller-review-pt
+  pillar: 育児グッズのPT目線レビュー
+  title: ベビーカー選びで見落としがちな「押す人」の身体への影響
+  status: pending
+
+- id: papa-lowback-care
+  pillar: パパ自身のケア
+  title: 育児中のパパの腰痛セルフケア、5分でできるストレッチ
+  status: pending
+
+- id: papa-sleep-deprivation
+  pillar: パパ自身のケア
+  title: 寝不足でも身体を壊さないための姿勢とセルフケア
+  status: pending
+
+- id: papa-carrying-technique
+  pillar: パパ自身のケア
+  title: 体格差があっても疲れない抱っこの仕方(パパ向け)
+  status: pending
