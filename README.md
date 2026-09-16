@@ -52,10 +52,13 @@ python scripts/generate_calendar.py --weeks 8 --days tue fri
 python scripts/generate_index.py
 ```
 
-`generate_draft.py` は既定でClaude APIのWeb検索を使い、生成のたびに
-「今の時期に関連する話題」を調べてから執筆する(トレンドは味付け程度で、
-医学的なコア情報は普遍的な内容を維持)。無効化したい場合は
-`--no-web-search` を付ける。詳しくは `docs/strategy.md` の「8.」を参照。
+`generate_draft.py` は既定でClaude APIのWeb検索を使い、PubMed・WHO・
+厚生労働省などの信頼できるドメインに限定して医学的な主張の裏付けを
+確認し、記事末に参考文献を明示する(公開時点に依存する表現は含めない)。
+無効化したい場合は `--no-web-search` を付ける。詳しくは
+`docs/strategy.md` の「8.」を参照。参考文献のURLは生成AI特有の
+ハルシネーションのリスクがあるため、レビュー時に実在するか
+スポットチェックすること(`docs/compliance.md` の「7.」参照)。
 
 `generate_draft.py` は生成のたびに実際のトークン使用量と概算コスト(USD)を
 標準出力に表示する。GitHub Actions実行時はジョブのログで確認できる。

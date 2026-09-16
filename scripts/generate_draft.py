@@ -12,21 +12,21 @@ used に更新する。
     python scripts/generate_draft.py --tier paid     # 有料記事を強制指定
     python scripts/generate_draft.py --topic-id rollover-milestone
     python scripts/generate_draft.py --dry-run       # API呼び出しをせず選択結果だけ確認
-    python scripts/generate_draft.py --no-web-search # トレンド調査なしで生成(コスト節約・オフライン確認用)
+    python scripts/generate_draft.py --no-web-search # 根拠確認なしで生成(コスト節約・オフライン確認用)
 
 tierの自動判定ルール(--tier auto、既定):
     無料記事をFIRST_PAID_AFTER本使い終わるまでは常にfree。以降は、
     直近の有料記事から無料記事をPAID_INTERVAL本使うたびに1本paidを
     はさむ。有料記事のネタが尽きたら自動的にfreeに戻る。
 
-トレンド調査について:
-    既定でClaude APIのWeb検索ツールを有効にし、生成のたびにモデル自身が
-    「今の時期に関連する話題」を検索してから執筆する。これにより、
-    発達の目安など普遍的な医学情報(コア部分)は変えずに、フックや具体例
-    だけ旬なものにできる。少子化で市場が縮小しても、内容自体は将来
-    読まれても陳腐化しにくい設計。検索1回ごとに別途課金される(トークン
-    課金とは別枠)。print_costのUSD表示は検索自体の課金を含まないため、
-    実際の請求額はやや上振れする点に注意。
+Web検索(医学的根拠の確認)について:
+    既定でClaude APIのWeb検索ツールを有効にし、PubMed・WHO・厚生労働省
+    などの信頼できるドメインに限定して検索させ(EVIDENCE_ALLOWED_DOMAINS)、
+    本文中の医学的な主張の裏付けを取らせたうえで、記事末に参考文献を
+    明示させる。時事的な話題を記事に混ぜる目的では使わない(公開時点に
+    依存する表現は禁止)。検索1回ごとに別途課金される(トークン課金とは
+    別枠)。print_costのUSD表示は検索自体の課金を含まないため、実際の
+    請求額はやや上振れする点に注意。
 """
 
 import argparse
@@ -47,7 +47,21 @@ DRAFTS_DIR = ROOT / "content" / "drafts"
 MODEL = "claude-opus-5"
 PRICE_PER_MTOK_INPUT_USD = 5.00
 PRICE_PER_MTOK_OUTPUT_USD = 25.00
-WEB_SEARCH_MAX_USES = 2  # 1生成あたりの検索回数の上限(コスト抑制)
+WEB_SEARCH_MAX_USES = 4  # 1生成あたりの検索回数の上限(コスト抑制)
+
+# 医学的根拠の確認に使う検索先を、信頼できるドメインに限定する
+EVIDENCE_ALLOWED_DOMAINS = [
+    "pubmed.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov",
+    "www.cochranelibrary.com",
+    "www.who.int",
+    "www.cdc.gov",
+    "www.nichd.nih.gov",
+    "www.aap.org",
+    "www.mhlw.go.jp",
+    "www.jpeds.or.jp",
+    "www.japanpt.or.jp",
+]
 
 # tier自動判定のパラメータ(docs/strategy.md フェーズ1の投入方針に対応)
 FIRST_PAID_AFTER = 6   # 最初の有料記事を出すまでに必要な無料記事の使用数
@@ -94,15 +108,26 @@ def decide_tier(free_topics: list[dict], paid_topics: list[dict]) -> str:
     return "paid" if free_used >= threshold else "free"
 
 
-TREND_RESEARCH_INSTRUCTION = """執筆前に、web_searchツールを使って次を1〜2回検索し、確認すること:
-- 現在の時期(季節・月)に関連してこのトピックの読者(パパ・ママ)が
-  気にしていそうな話題(例: 流行している感染症、季節特有の育児の悩み、
-  最近の子育て関連のニュースやSNSでの話題)
-検索結果は「フック(書き出し)」や具体例に一言反映させる程度に留め、
-発達の目安・医学的な核心部分は普遍的な内容のまま変えないこと
-(この記事は将来何年も読まれる可能性があるため、トレンドは味付け程度に
-とどめ、内容自体を陳腐化させないこと)。検索で特に新しい情報が
-見つからなければ、無理に反映せず通常通り執筆してよい。
+EVIDENCE_INSTRUCTION = """執筆前に、web_searchツールを使って、本文で扱う医学的な主張(発達の目安・
+リスク要因・対処法など)についてPubMed・WHO・厚生労働省・日本小児科学会・
+日本理学療法士協会などの信頼できる情報源を検索し、裏付けを確認すること。
+
+- 医学的に広く合意されている内容と、まだ十分なエビデンスがない・
+  専門家の間で見解が分かれている内容は、はっきり区別して書くこと。
+  例:「複数の研究で〜と報告されています」/
+  「〜については現時点で十分な科学的根拠はなく、個人差が大きいとされています」
+- 記事の最後、免責文の直前に「## 参考文献」という見出しを作り、実際に
+  検索でヒットした情報源のタイトルとURLを箇条書きで示すこと。
+  検索で裏付けが確認できなかった主張は参考文献に含めない、または
+  本文中に「明確な出典は確認できませんでした」等、正直に明記すること。
+- 実在しない論文・URL・団体名を創作すること(ハルシネーション)は
+  絶対に禁止。1件も裏付けが見つからない場合は、参考文献の見出し自体を
+  省略してよい(空欄や架空の項目を作らない)。
+
+重要: この記事は「いつ・誰が読んでも通用する」内容にすること。
+「現在は」「今年は」「最近」「〜が話題になっています」のような、
+公開時点に依存する表現は本文に一切含めないこと。Web検索は医学的な
+事実確認・引用のためだけに使い、時事的な話題を記事に反映しないこと。
 """
 
 
@@ -113,7 +138,7 @@ def build_prompt(topic: dict, persona: str, tier: str) -> tuple[str, str]:
     )
 
     if tier == "paid":
-        user = f"""{TREND_RESEARCH_INSTRUCTION}
+        user = f"""{EVIDENCE_INSTRUCTION}
 次のトピックで、note有料記事(ディープダイブ)の下書きを作成してください。
 
 タイトル: {topic['title']}
@@ -129,7 +154,8 @@ persona.md の「有料記事(ディープダイブ)のテンプレート」の�
 (タイトル案を1つ、続けて無料エリア(フック→重要性→関連無料記事への
 一言リンク)。次に `▼ここから有料エリア` という行を単独で入れ、
 続けて有料エリア({topic['format']}の形式で、読むだけでなく
-「使える」内容にする)。最後に免責文とCTA。
+「使える」内容にする)。そのあとに「## 参考文献」(EVIDENCE_INSTRUCTION
+参照。裏付けがなければ省略)、最後に免責文とCTA。
 全体で2000〜3000文字程度。見出しには「## 」を使うこと。)
 
 # [Xスレッド]
@@ -139,7 +165,7 @@ persona.md の「有料記事(ディープダイブ)のテンプレート」の�
 """
         return system, user
 
-    user = f"""{TREND_RESEARCH_INSTRUCTION}
+    user = f"""{EVIDENCE_INSTRUCTION}
 次のトピックでnote記事の下書きを作成してください。
 
 トピック: {topic['title']}
@@ -150,7 +176,8 @@ persona.md の「有料記事(ディープダイブ)のテンプレート」の�
 # [note記事本文]
 (タイトル案を1つ、続けて本文。docs/strategy.md の記事テンプレート
 「フック→結論の先出し→医学的解説→具体的アクション3〜5個→
-受診の目安→まとめ+CTA→免責文」の構成に従うこと。
+受診の目安→まとめ+CTA→参考文献→免責文」の構成に従うこと。
+参考文献はEVIDENCE_INSTRUCTION参照(裏付けがなければ見出しごと省略)。
 免責文とCTAはpersonaに記載の定型文をそのまま使うこと。
 本文は1500〜2500文字程度。見出しには「## 」を使うこと。)
 
@@ -169,6 +196,7 @@ def call_claude(system: str, user: str, use_web_search: bool) -> str:
             "type": "web_search_20260209",
             "name": "web_search",
             "max_uses": WEB_SEARCH_MAX_USES,
+            "allowed_domains": EVIDENCE_ALLOWED_DOMAINS,
         })
 
     with client.messages.stream(
@@ -207,7 +235,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="APIを呼ばずに選択結果のみ表示")
     parser.add_argument(
         "--no-web-search", action="store_true",
-        help="トレンド調査(Web検索)を無効化する(コスト節約・オフライン確認用)",
+        help="医学的根拠の確認(Web検索)を無効化する(コスト節約・オフライン確認用)",
     )
     args = parser.parse_args()
 
