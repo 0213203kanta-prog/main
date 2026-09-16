@@ -16,6 +16,10 @@ on:
         type: choice
         options: [auto, free, paid]
         default: auto
+      topic_id:
+        description: "特定トピックを指定して(再)生成したい場合のtopic-id(空欄なら自動選択)"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -39,9 +43,14 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TIER: ${{ github.event.inputs.tier || 'auto' }}
+          TOPIC_ID: ${{ github.event.inputs.topic_id }}
         run: |
           set -o pipefail
-          python scripts/generate_draft.py --tier "$TIER" | tee /tmp/draft.log
+          ARGS=(--tier "$TIER")
+          if [ -n "$TOPIC_ID" ]; then
+            ARGS+=(--topic-id "$TOPIC_ID")
+          fi
+          python scripts/generate_draft.py "${ARGS[@]}" | tee /tmp/draft.log
           RESOLVED_TIER=$(grep -m1 -oE '^\[[a-z]+\]' /tmp/draft.log | tr -d '[]')
           echo "tier=$RESOLVED_TIER" >> "$GITHUB_OUTPUT"
 
