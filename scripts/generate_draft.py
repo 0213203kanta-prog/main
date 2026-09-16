@@ -148,6 +148,7 @@ def build_prompt(topic: dict, persona: str, tier: str) -> tuple[str, str]:
 有料エリアの形式: {topic['format']}
 
 出力は以下のMarkdown形式で、これ以外の前置き・後書きは一切書かないでください。
+(「調べます」「作成します」等の一言も含め、`# [note記事本文]` より前に何も書かないこと。)
 persona.md の「有料記事(ディープダイブ)のテンプレート」の構成に厳密に従うこと。
 
 # [note記事本文]
@@ -172,6 +173,7 @@ persona.md の「有料記事(ディープダイブ)のテンプレート」の�
 コンテンツの柱: {topic['pillar']}
 
 出力は以下のMarkdown形式で、これ以外の前置き・後書きは一切書かないでください。
+(「調べます」「作成します」等の一言も含め、`# [note記事本文]` より前に何も書かないこと。)
 
 # [note記事本文]
 (タイトル案を1つ、続けて本文。docs/strategy.md の記事テンプレート
@@ -211,7 +213,16 @@ def call_claude(system: str, user: str, use_web_search: bool) -> str:
         response = stream.get_final_message()
 
     text_parts = [block.text for block in response.content if block.type == "text"]
-    return "\n".join(text_parts), response.usage
+    text = "\n".join(text_parts)
+
+    # Web検索ツール使用時、指定フォーマットの前に一言(前置き)が
+    # 混ざることがあるため、指定した見出し以降だけを残す
+    marker = "# [note記事本文]"
+    marker_index = text.find(marker)
+    if marker_index > 0:
+        text = text[marker_index:]
+
+    return text, response.usage
 
 
 def print_cost(usage) -> None:
