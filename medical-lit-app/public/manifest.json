@@ -1,0 +1,16 @@
+{
+  "name": "医学文献チェック",
+  "short_name": "文献チェック",
+  "description": "登録キーワードでPubMedを検索し、気になった論文を保存できる個人用アプリ",
+  "start_url": "/search",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
